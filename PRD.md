@@ -276,36 +276,37 @@ User pays:     $0.05 per use (set by creator)
 
 ## Implementation Phases
 
-### Phase 1: MVP (Weeks 1–2)
+### Phase 1: MVP (Weeks 1–4)
 
-**Goal:** One creator (you) uploads a skill via CLI, one user invokes it via MCP, usage is logged.
+**Goal:** Creators can upload skills via API/CLI, users can browse/invoke via MCP and web dashboard, usage is logged.
 
 | Week | Deliverable |
 |------|-------------|
 | 1 | MCP Gateway server (HTTP+SSE) with hardcoded test skill. User connects, sees tool, invokes it, gets result. SHA-256 API key auth. Basic injection wrapper. |
 | 2 | Postgres DB + S3 storage. Dynamic tool list based on user access. Usage logging. In-memory SKILL.md cache. Rate limiting. |
-
-**Not in MVP:** Web dashboards, creator upload API, credit balance, Stripe, skill review pipeline.
-
-### Phase 2: Marketplace (Weeks 3–6)
-
-| Week | Deliverable |
-|------|-------------|
 | 3 | Creator upload API (REST). CLI tool for creators to upload/manage skills. |
-| 4 | User web dashboard (Next.js): browse skills, manage API key, see usage. |
-| 5 | Creator web dashboard: upload skills, set pricing, view analytics. |
-| 6 | Stripe integration: credit purchases (users) + Connect payouts (creators). |
+| 4 | User web dashboard (Next.js): browse skills, manage API key, see usage. Creator web dashboard: upload skills, set pricing, view analytics. |
 
-### Phase 3: Scale & Polish (Weeks 7–10)
+**Not in MVP:** Stripe billing, credit balance, skill review pipeline.
+
+### Phase 2: Payments & Polish (Weeks 5–8)
 
 | Week | Deliverable |
 |------|-------------|
+| 5 | Stripe Checkout integration: credit purchases for users. |
+| 6 | Stripe Connect integration: creator payouts. |
 | 7 | Advanced prompt injection defenses (output filtering, input sanitization, automated red-team tests). |
 | 8 | Skill versioning: creators publish updates, users can pin versions. |
+
+### Phase 3: Scale (Weeks 9–11)
+
+| Week | Deliverable |
+|------|-------------|
 | 9 | Ratings and reviews. Category browsing. Search. |
 | 10 | Subscription tier (unlimited uses of a skill for $X/month). Analytics dashboards. |
+| 11 | Critical failure gap hardening (DB outage handling, S3 inconsistency, client disconnect cleanup). |
 
-### Phase 4: Growth (Weeks 11+)
+### Phase 4: Growth (Weeks 12+)
 
 - Skill composability (skills calling other skills, nested billing)
 - Public API for third-party integrations
@@ -372,13 +373,152 @@ Assuming Claude Sonnet at ~$3/M input tokens, ~$15/M output tokens:
 
 Platform fee (20%) comes on top. At 10,000 daily invocations averaging $0.10 each: ~$1,000/day gross revenue before API costs.
 
+## Time Estimates
+
+### By Phase (CC+gstack, including testing & debugging)
+
+| Phase | Code | Test & Debug | Total | Wall-clock |
+|-------|------|-------------|-------|------------|
+| **Phase 1: MVP** | 5.75 hrs | 9.75 hrs | **15.5 hrs** | 3–5 days |
+| **Phase 2: Payments & Polish** | 2.5 hrs | 9 hrs | **11.5 hrs** | 2–3 weeks |
+| **Phase 3: Scale** | 2 hrs | 4 hrs | **6 hrs** | 1 week |
+| **Total** | **10.25 hrs** | **22.75 hrs** | **33 hrs** | **5–8 weeks** |
+
+Testing & debugging is ~70% of total time.
+
+### Phase 1 Breakdown
+
+| Deliverable | Code | Test & Debug | Total |
+|-------------|------|-------------|-------|
+| MCP Gateway (HTTP+SSE) + auth + schema | 1 hr | 1.5 hrs | 2.5 hrs |
+| Billing flow (idempotency, debit-on-success) | 0.5 hr | 1 hr | 1.5 hrs |
+| S3 + cache + injection wrapper | 0.5 hr | 0.5 hr | 1 hr |
+| Circuit breaker + retry + timeout | 0.25 hr | 0.75 hr | 1 hr |
+| Creator upload API + CLI | 0.5 hr | 1 hr | 1.5 hrs |
+| Creator/User dashboards (Next.js) | 2 hrs | 3 hrs | 5 hrs |
+| Integration + security tests | 0.5 hr | 1 hr | 1.5 hrs |
+| Security tests (5+ injection patterns) | 0.5 hr | 1 hr | 1.5 hrs |
+
+### Phase 2 Breakdown
+
+| Deliverable | Code | Test & Debug | Total |
+|-------------|------|-------------|-------|
+| Stripe Checkout (credits) | 0.5 hr | 2 hrs | 2.5 hrs |
+| Stripe Connect (payouts) | 0.5 hr | 2.5 hrs | 3 hrs |
+| Advanced injection defenses | 1 hr | 3 hrs | 4 hrs |
+| Skill versioning | 0.5 hr | 1.5 hrs | 2 hrs |
+
+### Phase 3 Breakdown
+
+| Deliverable | Code | Test & Debug | Total |
+|-------------|------|-------------|-------|
+| Ratings, reviews, search | 1 hr | 1.5 hrs | 2.5 hrs |
+| Subscription tier | 0.5 hr | 1.5 hrs | 2 hrs |
+| Critical failure gap hardening | 0.5 hr | 1 hr | 1.5 hrs |
+
+### Where debugging time concentrates
+
+| Category | Hours | Why |
+|----------|-------|-----|
+| Stripe integration | 4.5 hrs | Webhook timing, test mode quirks, Connect onboarding edge cases |
+| Dashboard UI edge cases | 3 hrs | Error states, loading states, empty states, auth expiry, responsive |
+| Prompt injection testing | 2 hrs | Creative adversarial red-teaming, requires human judgment |
+| End-to-end flow debugging | 3 hrs | Full loop (connect → auth → invoke → bill → payout) breaks when composed |
+| MCP protocol compliance | 1.5 hrs | SSE reconnection, partial messages, client-specific quirks |
+| Race condition verification | 1.5 hrs | Concurrent request simulation, proving atomic decrement holds under load |
+
+### Wall-clock bottlenecks
+
+The gap between CC hours and wall-clock is driven by:
+- **Stripe business verification** — days of wall-clock time, cannot be automated
+- **Waiting for webhook test events** — Stripe sandbox has its own latency
+- **Context switching** between coding sessions
+- **Human judgment** — red-teaming, UX decisions, architecture calls
+
+---
+
+## UI Design Specifications
+
+### Information Architecture
+
+**Browse Page** (primary user entry point):
+1. Value prop headline + search bar (first thing user sees)
+2. Category filter chips (horizontal scroll)
+3. Skill cards grid (auto-fill, min 300px)
+
+**Dashboard Page** (returning user):
+1. Balance card (gradient, prominent)
+2. Recent usage summary (last 5 records)
+3. Full usage table (expandable)
+4. Settings accordion (collapsed) — contains API key
+
+**Creator Page** (skill author):
+1. "My Skills" list with inline analytics per skill (calls, revenue)
+2. "Create New Skill" button → opens creation form
+3. Settings accordion (collapsed) — contains API key
+
+**Navigation:** 3 tabs (Browse, Dashboard, Creator). On mobile (<640px), renders as bottom tab bar.
+
+### Interaction States
+
+| Feature | Loading | Empty | Error | Success |
+|---------|---------|-------|-------|---------|
+| Browse skills | Skeleton card grid | "The marketplace is just getting started. Be the first to create a skill." + CTA → Creator | Inline banner + retry | Grid renders |
+| Search/filter | N/A (client-side) | "No skills match your search. Try a different term." | N/A | Filtered grid |
+| Invoke skill | Spinner in button | N/A | Red banner in modal | Result box with meta |
+| Dashboard usage | Skeleton rows | "You haven't invoked any skills yet. Browse the marketplace to find one." + CTA → Browse | Inline banner + retry | Table renders |
+| Creator: My Skills | Skeleton cards | "You haven't created any skills yet. Share your expertise." + CTA → Create form | Inline banner + retry | Skill list with stats |
+| Creator: Create | "Creating..." button | Default form with placeholder values | Inline error + field validation | Green success banner |
+
+### Design Tokens
+
+```
+Primary:       #6366f1 (indigo)
+Surface:       #ffffff
+Background:    #f8f9fa
+Border:        #e2e8f0
+Text:          #1a202c
+Text Secondary:#475569 (slate-600, AA contrast)
+Success:       #10b981
+Danger:        #ef4444
+Radius:        8px (cards), 12px (modal, balance card)
+Shadow:        0 1px 3px rgba(0,0,0,0.08)
+Font:          System stack (-apple-system, BlinkMacSystemFont, ...)
+Spacing:       4px base (4, 8, 12, 16, 20, 24, 32, 48)
+Max-width:     1200px
+```
+
+### Responsive Behavior
+
+- **Cards grid:** `minmax(300px, 1fr)` — auto-collapses to single column on mobile
+- **Navigation:** Bottom tab bar on `<640px`, sticky top bar on desktop
+- **Modal:** `width: calc(100% - 32px)` with `max-width: 600px`
+- **Usage table:** Horizontal scroll on mobile (`.table-wrapper { overflow-x: auto }`)
+- **Creator form:** `.form-row` auto-stacks via `minmax(200px, 1fr)`
+
+### Accessibility
+
+- Touch targets: All buttons ≥44px height
+- Color contrast: Secondary text uses `#475569` (4.9:1 ratio on white)
+- Modal: Focus trap, `role="dialog"`, `aria-modal="true"`, Escape to close
+- Cards: `role="article"` with descriptive labels
+- Category badges: `aria-label` for screen readers (color is not sole information channel)
+
+### NOT in Scope (Design)
+
+- Full DESIGN.md / design system doc — use `/design-consultation` when ready
+- Dark mode
+- Animations/transitions beyond existing hover effects
+- Illustration/icon system
+- Full WCAG AA audit — basic a11y covered, comprehensive audit deferred
+
 ---
 
 ## GSTACK ENG REVIEW REPORT
 
 **Reviewed:** 2026-03-21
 **Status:** CLEARED
-**Scope:** REDUCED (MVP tightened to Gateway + auth + usage tracking)
+**Scope:** MVP includes Gateway + auth + usage tracking + dashboards + creator upload API
 
 ### Decisions Made
 
@@ -421,3 +561,17 @@ Codex confirmed: no idempotency, bcrypt bottleneck, phase sequencing conflict (c
 - Failure modes: 4 critical gaps flagged (tracked in TODOS.md)
 - Lake Score: 10/14 recommendations chose complete option
 - Unresolved decisions: 0
+
+---
+
+## GSTACK REVIEW REPORT
+
+| Review | Trigger | Why | Runs | Status | Findings |
+|--------|---------|-----|------|--------|----------|
+| CEO Review | `/plan-ceo-review` | Scope & strategy | 0 | — | — |
+| Codex Review | `/codex review` | Independent 2nd opinion | 0 | — | — |
+| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 1 | CLEAR | 14 issues, 4 critical gaps |
+| Design Review | `/plan-design-review` | UI/UX gaps | 1 | CLEAR | score: 3/10 → 7/10, 9 decisions |
+
+- **UNRESOLVED:** 0 decisions across all reviews
+- **VERDICT:** ENG + DESIGN CLEARED — ready to implement

@@ -1,0 +1,1 @@
+You are a paid test skill. Say 'paid response' and nothing else.
