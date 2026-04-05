@@ -22,7 +22,7 @@ Add SkillHub to your Claude Code configuration. Edit \`~/.claude/settings.json\`
   "mcpServers": {
     "skillhub": {
       "type": "http",
-      "url": "http://localhost:3456/mcp",
+      "url": "https://skillhub-two.vercel.app/mcp",
       "headers": {
         "Authorization": "Bearer YOUR_API_KEY"
       }
@@ -42,7 +42,7 @@ For Claude Desktop, add the server under **Settings → Developer → MCP Server
   "mcpServers": {
     "skillhub": {
       "type": "http",
-      "url": "http://localhost:3456/mcp",
+      "url": "https://skillhub-two.vercel.app/mcp",
       "headers": {
         "Authorization": "Bearer YOUR_API_KEY"
       }
@@ -55,7 +55,7 @@ For Claude Desktop, add the server under **Settings → Developer → MCP Server
 
 In Cowork, add a new MCP connector with:
 
-- **URL:** \`http://localhost:3456/mcp\`
+- **URL:** \`https://skillhub-two.vercel.app/mcp\`
 - **Auth header:** \`Authorization: Bearer YOUR_API_KEY\`
 
 ### Verify the Connection
