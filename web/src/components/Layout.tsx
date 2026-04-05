@@ -16,10 +16,7 @@ export default function Layout({ children }: { children: ReactNode }) {
             <NavLink to="/dashboard" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
               Dashboard
             </NavLink>
-            <NavLink to="/bookshelf" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
-              Bookshelf
-            </NavLink>
-            <NavLink to="/creator" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+<NavLink to="/creator" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
               Creator
             </NavLink>
             <NavLink to="/docs" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>

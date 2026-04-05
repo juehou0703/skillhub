@@ -14,7 +14,7 @@ export default function HomePage() {
         </h1>
         <p className="home-hero-subtitle">
           SkillHub is a marketplace of curated Claude skills built by domain experts.
-          Invoke them via MCP in Claude Code or Cowork — no subscriptions, no setup.
+          Invoke them via MCP in Claude Code or Cowork — no subscriptions, no setup. Turn your domain knowledge into income, now.
         </p>
         <div className="home-hero-actions">
           <Link to="/browse" className="btn btn-primary home-hero-cta">
