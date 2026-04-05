@@ -20,6 +20,8 @@ export interface UsageRecord {
   input_tokens: number;
   output_tokens: number;
   skill_cost: number;
+  request_input: Record<string, unknown> | null;
+  response_output: string | null;
   created_at: string;
 }
 
@@ -102,4 +104,46 @@ export async function getSkillAnalytics(skillId: string): Promise<Analytics> {
   const res = await fetch(`${BASE}/skills/${skillId}/analytics`);
   if (!res.ok) throw new Error(`Failed to fetch analytics: ${res.statusText}`);
   return res.json();
+}
+
+// ============ BOOKSHELF ============
+
+export interface BookmarkItem extends Skill {
+  note: string;
+  bookmarked_at: string;
+}
+
+export async function getBookshelf(apiKey: string): Promise<BookmarkItem[]> {
+  const res = await fetch(`${BASE}/bookshelf`, {
+    headers: { 'Authorization': `Bearer ${apiKey}` },
+  });
+  if (!res.ok) throw new Error(`Failed to fetch bookshelf: ${res.statusText}`);
+  const data = await res.json();
+  return data.bookmarks ?? [];
+}
+
+export async function addBookmark(skillId: string, apiKey: string, note?: string): Promise<void> {
+  const res = await fetch(`${BASE}/bookshelf/${skillId}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({ note: note || '' }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || res.statusText);
+  }
+}
+
+export async function removeBookmark(skillId: string, apiKey: string): Promise<void> {
+  const res = await fetch(`${BASE}/bookshelf/${skillId}`, {
+    method: 'DELETE',
+    headers: { 'Authorization': `Bearer ${apiKey}` },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || res.statusText);
+  }
 }

@@ -51,6 +51,8 @@ CREATE TABLE usage_events (
     output_tokens   INTEGER,
     skill_cost      INTEGER,
     api_cost        INTEGER,
+    request_input   JSONB,
+    response_output TEXT,
     created_at      TIMESTAMPTZ DEFAULT now()
 );
 

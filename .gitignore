@@ -1,0 +1,17 @@
+node_modules/
+.env
+.env.local
+dist/
+build/
+.DS_Store
+*.log
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.turbo/
+.next/
+out/
+.bun
+bun.lockb

@@ -9,6 +9,7 @@ export default function DashboardPage() {
   const [balanceCents, setBalanceCents] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const fetchUsage = async () => {
     if (!apiKey.trim()) return;
@@ -29,6 +30,10 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchUsage();
   }, []);
+
+  const toggleExpand = (id: string) => {
+    setExpandedId(expandedId === id ? null : id);
+  };
 
   return (
     <div className="page">
@@ -71,6 +76,7 @@ export default function DashboardPage() {
             <table className="usage-table">
               <thead>
                 <tr>
+                  <th style={{ width: 32 }}></th>
                   <th>Skill</th>
                   <th>Status</th>
                   <th>Input Tokens</th>
@@ -80,20 +86,61 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {usage.map((record) => (
-                  <tr key={record.id}>
-                    <td className="td-skill">{record.skill_name}</td>
-                    <td>
-                      <span className={`status-badge status-${record.status}`}>
-                        {record.status}
-                      </span>
-                    </td>
-                    <td>{record.input_tokens ?? '—'}</td>
-                    <td>{record.output_tokens ?? '—'}</td>
-                    <td>{record.skill_cost != null ? `$${(record.skill_cost / 100).toFixed(4)}` : '—'}</td>
-                    <td>{new Date(record.created_at).toLocaleString()}</td>
-                  </tr>
-                ))}
+                {usage.map((record) => {
+                  const hasLogs = record.request_input || record.response_output;
+                  const isExpanded = expandedId === record.id;
+                  return (
+                    <>
+                      <tr
+                        key={record.id}
+                        className={hasLogs ? 'row-expandable' : ''}
+                        onClick={() => hasLogs && toggleExpand(record.id)}
+                      >
+                        <td className="td-chevron">
+                          {hasLogs && (
+                            <span className={`chevron ${isExpanded ? 'chevron-open' : ''}`}>
+                              &#x25B8;
+                            </span>
+                          )}
+                        </td>
+                        <td className="td-skill">{record.skill_name}</td>
+                        <td>
+                          <span className={`status-badge status-${record.status}`}>
+                            {record.status}
+                          </span>
+                        </td>
+                        <td>{record.input_tokens ?? '—'}</td>
+                        <td>{record.output_tokens ?? '—'}</td>
+                        <td>{record.skill_cost != null ? `$${(record.skill_cost / 100).toFixed(4)}` : '—'}</td>
+                        <td>{new Date(record.created_at).toLocaleString()}</td>
+                      </tr>
+                      {isExpanded && (
+                        <tr key={`${record.id}-detail`} className="row-detail">
+                          <td colSpan={7}>
+                            <div className="log-panels">
+                              {record.request_input && (
+                                <div className="log-panel">
+                                  <div className="log-label">Request Input</div>
+                                  <pre className="log-content">
+                                    {JSON.stringify(record.request_input, null, 2)}
+                                  </pre>
+                                </div>
+                              )}
+                              {record.response_output && (
+                                <div className="log-panel">
+                                  <div className="log-label">
+                                    {record.status === 'failed' ? 'Error' : 'Response Output'}
+                                  </div>
+                                  <pre className="log-content">{record.response_output}</pre>
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </>
+                  );
+                })}
               </tbody>
             </table>
           </div>

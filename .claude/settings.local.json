@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(echo $ANTHROPIC_API_KEY)",
+      "Bash(env)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(ls -la /Users/juehou/workspace/skillhub/*.md)",
+      "Bash(curl -s http://localhost:3456/api/health)",
+      "Bash(curl -s http://localhost:3456/api/skills)",
+      "Bash(curl -s http://localhost:3456/health)",
+      "Bash(claude mcp:*)",
+      "Bash(curl -s -w \"\\\\nHTTP_STATUS: %{http_code}\" -H \"Authorization: Bearer sk_test_skillhub_user_001\" http://localhost:3456/mcp/sse)",
+      "Bash(curl -s -w \"\\\\nHTTP: %{http_code}\" -X POST -H \"Authorization: Bearer sk_test_skillhub_user_001\" -H \"Content-Type: application/json\" -d '{\"\"jsonrpc\"\":\"\"2.0\"\",\"\"method\"\":\"\"initialize\"\",\"\"params\"\":{\"\"protocolVersion\"\":\"\"2025-03-26\"\",\"\"capabilities\"\":{},\"\"clientInfo\"\":{\"\"name\"\":\"\"test\"\",\"\"version\"\":\"\"1.0\"\"}},\"\"id\"\":1}' http://localhost:3456/mcp)",
+      "Bash(curl -s -w \"\\\\nHTTP: %{http_code}\" -X POST -H \"Authorization: Bearer sk_test_skillhub_user_001\" -H \"Content-Type: application/json\" -H \"Accept: application/json, text/event-stream\" -d '{\"\"jsonrpc\"\":\"\"2.0\"\",\"\"method\"\":\"\"initialize\"\",\"\"params\"\":{\"\"protocolVersion\"\":\"\"2025-03-26\"\",\"\"capabilities\"\":{},\"\"clientInfo\"\":{\"\"name\"\":\"\"test\"\",\"\"version\"\":\"\"1.0\"\"}},\"\"id\"\":1}' http://localhost:3456/mcp)",
+      "mcp__skillhub__echo-test-1774164321295",
+      "Skill(guard)",
+      "Skill(guard:*)",
+      "mcp__skillhub__chinese-crepe",
+      "Bash(curl -s -X POST -H \"Authorization: Bearer sk_test_skillhub_user_001\" -H \"Content-Type: application/json\" -H \"Accept: application/json, text/event-stream\" -d '{\"\"jsonrpc\"\":\"\"2.0\"\",\"\"method\"\":\"\"initialize\"\",\"\"params\"\":{\"\"protocolVersion\"\":\"\"2025-03-26\"\",\"\"capabilities\"\":{},\"\"clientInfo\"\":{\"\"name\"\":\"\"test\"\",\"\"version\"\":\"\"1.0\"\"}},\"\"id\"\":1}' http://localhost:3456/mcp)",
+      "Bash(bun run:*)",
+      "Bash(curl -s -X POST http://localhost:3456/mcp -H \"Authorization: Bearer sk_test_skillhub_user_001\" -H \"Content-Type: application/json\" -d '{\"\"\"\"jsonrpc\"\"\"\":\"\"\"\"2.0\"\"\"\",\"\"\"\"id\"\"\"\":1,\"\"\"\"method\"\"\"\":\"\"\"\"tools/list\"\"\"\"}')",
+      "Bash(psql -p 5433 -U skillhub -d skillhub_dev -c \"ALTER TABLE usage_events ADD COLUMN IF NOT EXISTS request_input JSONB, ADD COLUMN IF NOT EXISTS response_output TEXT;\")",
+      "Bash(docker ps:*)",
+      "Bash(docker exec:*)",
+      "Bash(curl -s -X POST http://localhost:3456/mcp -H \"Authorization: Bearer sk_test_skillhub_user_001\" -H \"Content-Type: application/json\" -H \"Accept: application/json, text/event-stream\" -d '{\"\"jsonrpc\"\":\"\"2.0\"\",\"\"id\"\":1,\"\"method\"\":\"\"initialize\"\",\"\"params\"\":{\"\"protocolVersion\"\":\"\"2025-03-26\"\",\"\"capabilities\"\":{},\"\"clientInfo\"\":{\"\"name\"\":\"\"test\"\",\"\"version\"\":\"\"1.0\"\"}}}')",
+      "Bash(curl -s -H \"Authorization: Bearer sk_test_skillhub_user_001\" http://localhost:3456/api/usage)",
+      "Bash(python3 -m json.tool)",
+      "Bash(gtimeout 5 bun run src/mcp-stdio.ts)",
+      "mcp__skillhub__build-a-bookshelf",
+      "Bash(cat skills-data/skills/*/SKILL.md)"
+    ]
+  },
+  "enabledMcpjsonServers": [
+    "skillhub"
+  ]
+}

@@ -5,7 +5,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import sql from "./db.js";
 import {
   authenticateApiKey,
@@ -153,6 +153,9 @@ app.post("/api/skills", async (c) => {
       ON CONFLICT DO NOTHING
     `;
 
+    // Notify active MCP sessions about the new tool
+    refreshSessionTools().catch((err) => console.error("Tool refresh error:", err));
+
     return c.json({ id: skillId, slug, status: "published", s3_key: realKey }, 201);
   } catch (err: any) {
     if (err.message?.includes("duplicate key") && err.message?.includes("slug")) {
@@ -197,6 +200,9 @@ app.put("/api/skills/:id", async (c) => {
       `;
     }
 
+    // Notify active MCP sessions about the updated tool
+    refreshSessionTools().catch((err) => console.error("Tool refresh error:", err));
+
     return c.json({ status: "updated" });
   } catch (err: any) {
     console.error("Update skill error:", err);
@@ -237,7 +243,8 @@ app.get("/api/usage", async (c) => {
 
     const rows = await sql`
       SELECT ue.id, ue.skill_id, s.slug as skill_slug, s.display_name as skill_name,
-             ue.status, ue.input_tokens, ue.output_tokens, ue.skill_cost, ue.created_at
+             ue.status, ue.input_tokens, ue.output_tokens, ue.skill_cost,
+             ue.request_input, ue.response_output, ue.created_at
       FROM usage_events ue
       JOIN skills s ON s.id = ue.skill_id
       WHERE ue.user_id = ${user.id}
@@ -306,96 +313,186 @@ app.post("/api/skills/:slug/invoke", async (c) => {
   } catch (err: any) {
     const status = err.message?.includes("not found") ? 404
       : err.message?.includes("access") ? 403
-      : err.message?.includes("Insufficient balance") ? 402
-      : err.message?.includes("Invalid input") ? 422
-      : err.message?.includes("Rate limit") ? 429
-      : err.message?.includes("Circuit breaker") ? 503
-      : 500;
+        : err.message?.includes("Insufficient balance") ? 402
+          : err.message?.includes("Invalid input") ? 422
+            : err.message?.includes("Rate limit") ? 429
+              : err.message?.includes("Circuit breaker") ? 503
+                : 500;
     return c.json({ error: err.message }, status);
   }
 });
 
-// ============ MCP SSE ENDPOINT ============
+// ============ OAUTH METADATA (required by MCP clients for auth discovery) ============
 
-// Store active SSE transports
-const transports = new Map<string, SSEServerTransport>();
+app.get("/.well-known/oauth-authorization-server", (c) => {
+  const base = new URL(c.req.url).origin;
+  return c.json({
+    issuer: base,
+    authorization_endpoint: `${base}/oauth/authorize`,
+    token_endpoint: `${base}/oauth/token`,
+    registration_endpoint: `${base}/oauth/register`,
+    scopes_supported: ["mcp"],
+    response_types_supported: ["code"],
+    grant_types_supported: ["authorization_code"],
+    code_challenge_methods_supported: ["S256"],
+    token_endpoint_auth_methods_supported: ["none"],
+  });
+});
 
-app.get("/mcp/sse", async (c) => {
+// ============ MCP STREAMABLE HTTP ENDPOINT ============
+
+// Store active sessions with tool handles for live updates
+type RegisteredTool = ReturnType<McpServer["tool"]>;
+interface McpSession {
+  transport: WebStandardStreamableHTTPServerTransport;
+  server: McpServer;
+  userId: string;
+  tools: Map<string, RegisteredTool>; // slug → handle
+}
+const sessions = new Map<string, McpSession>();
+
+// Helper: build Zod schema props from a skill's JSON Schema
+function buildZodProps(schema: any) {
+  if (!schema?.properties) return {};
+  const required = new Set<string>(schema.required || []);
+  return Object.fromEntries(
+    Object.entries(schema.properties).map(([key, val]: [string, any]) => {
+      const desc = val.description || key;
+      let zodType: z.ZodTypeAny =
+        val.type === "string" ? z.string().describe(desc)
+          : val.type === "number" ? z.number().describe(desc)
+            : val.type === "array" ? z.array(z.string()).describe(desc)
+              : z.any().describe(desc);
+      if (!required.has(key)) zodType = zodType.optional();
+      return [key, zodType];
+    })
+  );
+}
+
+// Helper: register a single skill as an MCP tool, returns the handle
+function registerSkillTool(mcpServer: McpServer, userId: string, skill: any): RegisteredTool {
+  const schema = skill.input_schema || { type: "object", properties: {} };
+  return mcpServer.tool(
+    skill.slug,
+    skill.description,
+    buildZodProps(schema),
+    async (args: Record<string, unknown>) => {
+      try {
+        const result = await invokeSkill(userId, skill.slug, args as Record<string, any>);
+        return { content: [{ type: "text" as const, text: result.content }] };
+      } catch (err: any) {
+        return {
+          content: [{ type: "text" as const, text: `Error: ${err.message}` }],
+          isError: true,
+        };
+      }
+    }
+  );
+}
+
+// Create an MCP server with user's skills registered as tools
+async function createUserMcpServer(userId: string): Promise<{ server: McpServer; tools: Map<string, RegisteredTool> }> {
+  const mcpServer = new McpServer({
+    name: "skillhub-marketplace",
+    version: "0.1.0",
+  });
+
+  const skills = await getUserSkills(userId);
+  const tools = new Map<string, RegisteredTool>();
+  for (const skill of skills) {
+    tools.set(skill.slug, registerSkillTool(mcpServer, userId, skill));
+  }
+
+  return { server: mcpServer, tools };
+}
+
+// Refresh tools for active sessions — adds new skills, updates changed ones, removes deleted ones
+// Each mutation triggers a tools/list_changed notification to the client via the SDK
+async function refreshSessionTools(userId?: string) {
+  for (const [, session] of sessions) {
+    if (userId && session.userId !== userId) continue;
+
+    try {
+      const skills = await getUserSkills(session.userId);
+      const freshSlugs = new Set(skills.map((s) => s.slug));
+
+      // Remove tools for deleted skills
+      for (const [slug, handle] of session.tools) {
+        if (!freshSlugs.has(slug)) {
+          handle.remove();
+          session.tools.delete(slug);
+        }
+      }
+
+      // Add new skills / update existing ones
+      for (const skill of skills) {
+        const existing = session.tools.get(skill.slug);
+        if (existing) {
+          // Update description and schema in-place
+          existing.update({
+            description: skill.description,
+            paramsSchema: buildZodProps(skill.input_schema || { type: "object", properties: {} }),
+          });
+        } else {
+          // New skill — register it
+          session.tools.set(
+            skill.slug,
+            registerSkillTool(session.server, session.userId, skill)
+          );
+        }
+      }
+    } catch (err) {
+      console.error("Failed to refresh session tools:", err);
+    }
+  }
+}
+
+app.all("/mcp", async (c) => {
   const apiKey = extractApiKey(c.req.header("Authorization"));
   if (!apiKey) return c.json({ error: "Missing Authorization header" }, 401);
 
   const user = await authenticateApiKey(apiKey);
   if (!user) return c.json({ error: "Invalid API key" }, 401);
 
-  // Create MCP server for this user
-  const mcpServer = new McpServer({
-    name: "skillhub-marketplace",
-    version: "0.1.0",
-  });
-
-  // Register user's skills as MCP tools
-  const skills = await getUserSkills(user.id);
-  for (const skill of skills) {
-    const schema = skill.input_schema || { type: "object", properties: {} };
-    mcpServer.tool(
-      skill.slug,
-      skill.description,
-      schema.properties
-        ? Object.fromEntries(
-            Object.entries(schema.properties).map(([key, val]: [string, any]) => [
-              key,
-              val.type === "string"
-                ? z.string().describe(val.description || key)
-                : val.type === "number"
-                ? z.number().describe(val.description || key)
-                : val.type === "array"
-                ? z.array(z.string()).describe(val.description || key)
-                : z.any().describe(val.description || key),
-            ])
-          )
-        : {},
-      async (args: Record<string, unknown>) => {
-        try {
-          const result = await invokeSkill(user.id, skill.slug, args as Record<string, any>);
-          return { content: [{ type: "text" as const, text: result.content }] };
-        } catch (err: any) {
-          return {
-            content: [{ type: "text" as const, text: `Error: ${err.message}` }],
-            isError: true,
-          };
-        }
-      }
+  // Check for existing session
+  const sessionId = c.req.header("mcp-session-id");
+  if (sessionId) {
+    const session = sessions.get(sessionId);
+    if (session) {
+      return session.transport.handleRequest(c.req.raw);
+    }
+    // Session not found (server restarted or expired) — return 404 per spec.
+    // Clients MUST start a new session when they receive this.
+    return c.json(
+      { jsonrpc: "2.0", error: { code: -32000, message: "Session expired. Please reconnect." }, id: null },
+      404
     );
   }
 
-  // Create SSE transport
-  const transport = new SSEServerTransport("/mcp/messages", c.res);
-  const sessionId = crypto.randomUUID();
-  transports.set(sessionId, transport);
+  // New session: create transport + MCP server
+  const { server: mcpServer, tools } = await createUserMcpServer(user.id);
 
-  c.res.headers.set("x-session-id", sessionId);
+  const transport = new WebStandardStreamableHTTPServerTransport({
+    sessionIdGenerator: () => crypto.randomUUID(),
+    onsessioninitialized: (sid) => {
+      sessions.set(sid, { transport, server: mcpServer, userId: user.id, tools });
+    },
+    onsessionclosed: (sid) => {
+      sessions.delete(sid);
+    },
+  });
 
   await mcpServer.connect(transport);
 
-  // Cleanup on close
   transport.onclose = () => {
-    transports.delete(sessionId);
+    if (transport.sessionId) sessions.delete(transport.sessionId);
   };
 
-  return c.res;
+  return transport.handleRequest(c.req.raw);
 });
 
-app.post("/mcp/messages", async (c) => {
-  const sessionId = c.req.query("sessionId");
-  if (!sessionId) return c.json({ error: "Missing sessionId" }, 400);
-
-  const transport = transports.get(sessionId);
-  if (!transport) return c.json({ error: "Session not found" }, 404);
-
-  const body = await c.req.json();
-  await transport.handlePostMessage(c.req.raw, c.res, body);
-  return c.res;
-});
+// Return JSON for all unmatched routes so OAuth error responses are parseable
+app.notFound((c) => c.json({ error: "not_found" }, 404));
 
 export default app;
 export { app };

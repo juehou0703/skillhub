@@ -161,14 +161,16 @@ export async function invokeSkill(
         }
       }
 
-      // Mark usage event complete
+      // Mark usage event complete with full logs
       await tx`
         UPDATE usage_events
         SET status = 'complete',
             input_tokens = ${response.inputTokens},
             output_tokens = ${response.outputTokens},
             skill_cost = ${skill.price_per_use},
-            api_cost = 0
+            api_cost = 0,
+            request_input = ${sql.json(input)}::jsonb,
+            response_output = ${response.content}
         WHERE id = ${usageEventId}
       `;
     });
@@ -181,8 +183,8 @@ export async function invokeSkill(
       skillCost: skill.price_per_use,
     };
   } catch (err) {
-    // Mark failed
-    await sql`UPDATE usage_events SET status = 'failed' WHERE id = ${usageEventId}`;
+    // Mark failed (still store input for debugging)
+    await sql`UPDATE usage_events SET status = 'failed', request_input = ${sql.json(input)}::jsonb, response_output = ${(err as Error).message} WHERE id = ${usageEventId}`;
     throw err;
   }
 }

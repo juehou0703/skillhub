@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "skillhub": {
+      "command": "bun",
+      "args": ["run", "src/mcp-stdio.ts"],
+      "env": {
+        "SKILLHUB_URL": "http://localhost:3456",
+        "SKILLHUB_API_KEY": "sk_test_skillhub_user_001"
+      }
+    }
+  }
+}

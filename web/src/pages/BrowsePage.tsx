@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { browseSkills, type Skill } from '../lib/api';
+import { browseSkills, getBookshelf, type Skill, type BookmarkItem } from '../lib/api';
 import SkillCard from '../components/SkillCard';
 import InvokeModal from '../components/InvokeModal';
 
@@ -10,13 +10,31 @@ export default function BrowsePage() {
   const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
   const [filter, setFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
+  const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set());
+
+  const apiKey = localStorage.getItem('skillhub_api_key') || 'sk_test_skillhub_user_001';
 
   useEffect(() => {
-    browseSkills()
-      .then(setSkills)
+    Promise.all([
+      browseSkills(),
+      getBookshelf(apiKey).catch(() => []),
+    ])
+      .then(([skillsData, bookmarks]) => {
+        setSkills(skillsData);
+        setBookmarkedIds(new Set(bookmarks.map((b) => b.id)));
+      })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
+
+  const handleBookmarkChange = (skillId: string, bookmarked: boolean) => {
+    setBookmarkedIds((prev) => {
+      const next = new Set(prev);
+      if (bookmarked) next.add(skillId);
+      else next.delete(skillId);
+      return next;
+    });
+  };
 
   const categories = [...new Set(skills.map((s) => s.category).filter(Boolean))];
 
@@ -65,6 +83,8 @@ export default function BrowsePage() {
             key={skill.id || skill.slug}
             skill={skill}
             onInvoke={setSelectedSkill}
+            isBookmarked={bookmarkedIds.has(skill.id)}
+            onBookmarkChange={handleBookmarkChange}
           />
         ))}
       </div>

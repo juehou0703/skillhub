@@ -13,6 +13,28 @@ const GSTACK_DIR =
 const CREATOR_ID = "00000000-0000-0000-0000-000000000001"; // gstack creator
 const TEST_USER_ID = "00000000-0000-0000-0000-000000000010";
 
+// Pricing and category overrides for marketplace realism
+// ~50% of skills are paid ($1.99–$4.99 per invocation, stored in cents)
+const SKILL_OVERRIDES: Record<string, { price: number; category: string }> = {
+  benchmark: { price: 499, category: "analysis" },
+  "design-consultation": { price: 349, category: "creative" },
+  "design-review": { price: 299, category: "creative" },
+  "plan-design-review": { price: 399, category: "creative" },
+  codex: { price: 499, category: "coding" },
+  qa: { price: 399, category: "coding" },
+  "qa-only": { price: 249, category: "coding" },
+  review: { price: 299, category: "coding" },
+  "plan-ceo-review": { price: 349, category: "business" },
+  "office-hours": { price: 299, category: "business" },
+  retro: { price: 249, category: "analysis" },
+  "land-and-deploy": { price: 399, category: "developer-tools" },
+  "document-release": { price: 199, category: "writing" },
+  // Free skills with diversified categories
+  "plan-eng-review": { price: 0, category: "coding" },
+  investigate: { price: 0, category: "analysis" },
+  canary: { price: 0, category: "analysis" },
+};
+
 interface SkillMeta {
   name: string;
   description: string;
@@ -55,7 +77,7 @@ function defaultInputSchema(skillName: string): object {
   return {
     type: "object",
     properties: {
-      input: {
+      prompt: {
         type: "string",
         description: `Input for the ${skillName} skill`,
       },
@@ -64,7 +86,7 @@ function defaultInputSchema(skillName: string): object {
         description: "Additional context (optional)",
       },
     },
-    required: ["input"],
+    required: ["prompt"],
   };
 }
 
@@ -120,13 +142,18 @@ async function seed() {
       const tempId = crypto.randomUUID();
       const s3Key = await storeSkillFile(tempId, 1, content);
 
+      // Look up pricing/category overrides
+      const overrides = SKILL_OVERRIDES[slug];
+      const skillCategory = overrides?.category || "developer-tools";
+      const skillPrice = overrides?.price ?? 0;
+
       // Insert skill
       const rows = await sql<{ id: string }[]>`
         INSERT INTO skills (creator_id, slug, display_name, description, category, input_schema, model, price_per_use, s3_key, status)
         VALUES (
           ${CREATOR_ID}, ${slug}, ${displayName}, ${shortDesc},
-          'developer-tools', ${sql.json(defaultInputSchema(slug))}::jsonb,
-          'sonnet', 0, ${s3Key}, 'published'
+          ${skillCategory}, ${sql.json(defaultInputSchema(slug))}::jsonb,
+          'sonnet', ${skillPrice}, ${s3Key}, 'published'
         )
         RETURNING id
       `;

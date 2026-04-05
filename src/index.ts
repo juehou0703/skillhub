@@ -10,7 +10,7 @@ console.log(`
 ║          SkillHub Marketplace POC              ║
 ║                                                ║
 ║  REST API:   http://localhost:${PORT}             ║
-║  MCP SSE:    http://localhost:${PORT}/mcp/sse     ║
+║  MCP HTTP:   http://localhost:${PORT}/mcp          ║
 ║  Health:     http://localhost:${PORT}/health      ║
 ╚═══════════════════════════════════════════════╝
 `);
