@@ -72,10 +72,10 @@ In Claude Desktop go to **Settings → Developer → MCP Servers** and paste:
 Restart Claude, then paste this directly into the chat:
 
 \`\`\`
-List all available SkillHub tools and give me a one-line summary of each.
+List only the tools available from the SkillHub MCP server. Ignore all native Claude Code skills and slash commands — I only want to see tools registered via the external SkillHub MCP connection at skillhub-two.vercel.app.
 \`\`\`
 
-You should see your purchased skills listed. If not, check that your API key is correct.`,
+You should see your marketplace skills listed. If Claude lists its own built-in skills instead, make sure you include "MCP server tool" or "SkillHub MCP" in your prompt — Claude can otherwise confuse native skills with marketplace tools.`,
   },
   {
     id: 'usage',
@@ -84,16 +84,18 @@ You should see your purchased skills listed. If not, check that your API key is 
 
 Once connected, paste any of these prompts directly into Claude — no extra setup needed.
 
+**Important:** Always say "SkillHub MCP tool" in your prompt. Claude has its own built-in skills and can mix them up with marketplace tools if you're not explicit.
+
 ### See what skills you have access to
 
 \`\`\`
-List all my available SkillHub skills with their names and descriptions.
+List only the tools from the SkillHub MCP server — not native Claude skills.
 \`\`\`
 
 ### Run a code review
 
 \`\`\`
-Use the review skill on the following code and give me a detailed assessment:
+Use the SkillHub MCP tool `review` on the following code and give me a detailed assessment:
 
 [paste your code here]
 \`\`\`
@@ -101,7 +103,7 @@ Use the review skill on the following code and give me a detailed assessment:
 ### Run a design review
 
 \`\`\`
-Use the design-review skill on the following and give me actionable feedback:
+Use the SkillHub MCP tool `design-review` on the following and give me actionable feedback:
 
 [paste your design description, screenshot, or spec here]
 \`\`\`
@@ -109,7 +111,7 @@ Use the design-review skill on the following and give me actionable feedback:
 ### Run a benchmark / analysis
 
 \`\`\`
-Use the benchmark skill to evaluate the following and give me a structured report:
+Use the SkillHub MCP tool `benchmark` to evaluate the following and give me a structured report:
 
 [paste what you want benchmarked]
 \`\`\`
@@ -117,7 +119,7 @@ Use the benchmark skill to evaluate the following and give me a structured repor
 ### Run a CEO-level business review
 
 \`\`\`
-Use the plan-ceo-review skill on this plan and tell me what a CEO would flag:
+Use the SkillHub MCP tool `plan-ceo-review` on this plan and tell me what a CEO would flag:
 
 [paste your plan or document here]
 \`\`\`
@@ -125,7 +127,7 @@ Use the plan-ceo-review skill on this plan and tell me what a CEO would flag:
 ### Run office hours (general expert Q&A)
 
 \`\`\`
-Use the office-hours skill. My question is:
+Use the SkillHub MCP tool `office-hours`. My question is:
 
 [paste your question here]
 \`\`\`
@@ -134,17 +136,76 @@ Use the office-hours skill. My question is:
 
 - Each invocation is billed to your SkillHub balance — check your Dashboard to track usage.
 - You can pass any amount of context after the skill name. The more detail you give, the better the output.
-- Skills appear as MCP tools — Claude will call them automatically when you reference them by name.
+- Always reference skills as "SkillHub MCP tool \`slug\`" to avoid Claude using its own built-ins instead.
 
 ### Passing Parameters
 
 Some skills accept parameters:
 
 \`\`\`
-You: Use the translate skill with target_language="Spanish" on this paragraph: ...
+Use the SkillHub MCP tool `translate` with target_language="Spanish" on this paragraph: ...
 \`\`\`
 
 Check each skill's detail page on the Browse tab for its full parameter list.`,
+  },
+  {
+    id: 'troubleshooting',
+    title: 'Troubleshooting',
+    content: `## Troubleshooting
+
+If Claude isn't showing your SkillHub tools, you can manually verify the MCP connection with curl.
+
+### Full MCP handshake (3 steps)
+
+The MCP protocol requires an initialization handshake before you can list tools. Run all three steps in order.
+
+**Step 1 — Initialize and capture the session ID**
+
+\`\`\`bash
+INIT_RESP=$(curl -s -D - -X POST https://skillhub-two.vercel.app/mcp \\
+  -H "Authorization: Bearer YOUR_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -H "Accept: text/event-stream, application/json" \\
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}')
+
+SESSION_ID=$(echo "$INIT_RESP" | grep -i "mcp-session-id" | awk '{print $2}' | tr -d '\\r')
+echo "Session: $SESSION_ID"
+\`\`\`
+
+You should see a session ID printed and a response like:
+\`\`\`
+data: {"result":{"protocolVersion":"2024-11-05","capabilities":{"tools":{"listChanged":true}},"serverInfo":{"name":"skillhub-marketplace","version":"0.1.0"}},"jsonrpc":"2.0","id":1}
+\`\`\`
+
+**Step 2 — Send the initialized notification**
+
+\`\`\`bash
+curl -s -X POST https://skillhub-two.vercel.app/mcp \\
+  -H "Authorization: Bearer YOUR_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -H "mcp-session-id: $SESSION_ID" \\
+  -d '{"jsonrpc":"2.0","method":"notifications/initialized"}'
+\`\`\`
+
+**Step 3 — List all tools**
+
+\`\`\`bash
+curl -s -X POST https://skillhub-two.vercel.app/mcp \\
+  -H "Authorization: Bearer YOUR_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -H "Accept: text/event-stream, application/json" \\
+  -H "mcp-session-id: $SESSION_ID" \\
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/list"}'
+\`\`\`
+
+This returns the full list of tools registered for your account. If you see tools here but not in Claude, the issue is with how Claude Code is reading the MCP config — double-check \`~/.claude/settings.json\`.
+
+### Common errors
+
+- **401 Unauthorized** — API key is missing or wrong. Check the \`Authorization: Bearer ...\` header.
+- **404 on /mcp** — The session ID is stale (server restarted). Redo Step 1 to get a new session.
+- **Method not found on tools/list** — You skipped Step 2. The initialized notification must be sent before listing tools.
+- **Empty tools list** — Your account has no skills granted. Make sure skills exist in the Browse tab and are accessible to your user.`,
   },
   {
     id: 'api-keys',
