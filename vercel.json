@@ -4,15 +4,15 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://YOUR_RAILWAY_URL/api/:path*"
+      "destination": "https://skillhub-production-b28a.up.railway.app/api/:path*"
     },
     {
       "source": "/mcp/:path*",
-      "destination": "https://YOUR_RAILWAY_URL/mcp/:path*"
+      "destination": "https://skillhub-production-b28a.up.railway.app/mcp/:path*"
     },
     {
       "source": "/.well-known/:path*",
-      "destination": "https://YOUR_RAILWAY_URL/.well-known/:path*"
+      "destination": "https://skillhub-production-b28a.up.railway.app/.well-known/:path*"
     }
   ]
 }
