@@ -3,78 +3,70 @@ import { useState } from 'react';
 const sections = [
   {
     id: 'install',
-    title: 'Install MCP Server',
-    content: `## Install the SkillHub MCP Server
+    title: 'Connect to SkillHub',
+    content: `## Connect to SkillHub
 
-The SkillHub MCP server connects Claude to the skill marketplace, letting you invoke any published skill directly from Claude Code or Claude Desktop.
+SkillHub exposes an MCP server over HTTP — no package to install. Just point Claude at the endpoint with your API key and your skills appear as tools automatically.
 
 ### Prerequisites
 
-- **Bun** v1.0+ or **Node.js** v18+
 - A SkillHub account with an API key (get one from the Dashboard)
-
-### Quick Start
-
-Install the MCP server globally:
-
-\`\`\`bash
-bun install -g @skillhub/mcp-server
-\`\`\`
-
-Or with npm:
-
-\`\`\`bash
-npm install -g @skillhub/mcp-server
-\`\`\`
+- Claude Code v1.0+ or Claude Desktop with MCP support
 
 ### Configure Claude Code
 
-Add the SkillHub MCP server to your Claude Code configuration. Edit \`~/.claude/settings.json\`:
+Add SkillHub to your Claude Code configuration. Edit \`~/.claude/settings.json\`:
 
 \`\`\`json
 {
   "mcpServers": {
     "skillhub": {
-      "command": "skillhub-mcp",
-      "args": ["--api-key", "YOUR_API_KEY"],
-      "env": {
-        "SKILLHUB_API_URL": "https://api.skillhub.dev"
+      "type": "http",
+      "url": "http://localhost:3456/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_API_KEY"
       }
     }
   }
 }
 \`\`\`
 
-Or use the CLI shortcut:
-
-\`\`\`bash
-skillhub-mcp init --api-key YOUR_API_KEY
-\`\`\`
+Replace \`YOUR_API_KEY\` with the key from your Dashboard. The test key is \`sk_test_skillhub_user_001\`.
 
 ### Configure Claude Desktop
 
-For Claude Desktop, add the server in **Settings → Developer → MCP Servers**:
+For Claude Desktop, add the server under **Settings → Developer → MCP Servers**:
 
 \`\`\`json
 {
   "mcpServers": {
     "skillhub": {
-      "command": "skillhub-mcp",
-      "args": ["--api-key", "YOUR_API_KEY"]
+      "type": "http",
+      "url": "http://localhost:3456/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_API_KEY"
+      }
     }
   }
 }
 \`\`\`
 
-### Verify Installation
+### Configure Cowork
 
-Once configured, restart Claude and test:
+In Cowork, add a new MCP connector with:
+
+- **URL:** \`http://localhost:3456/mcp\`
+- **Auth header:** \`Authorization: Bearer YOUR_API_KEY\`
+
+### Verify the Connection
+
+Once configured, restart Claude and ask:
 
 \`\`\`
-You: Use the skillhub_list tool to show available skills
+You: What SkillHub skills are available?
 \`\`\`
 
-You should see a list of skills from the marketplace. If you get an error, check that your API key is valid and the server is running.`,
+You should see a list of your purchased skills as tools. If you get an error, check that the SkillHub server is running and your API key is valid.`,
   },
   {
     id: 'usage',
