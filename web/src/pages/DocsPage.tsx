@@ -1,4 +1,19 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [text]);
+  return (
+    <button className={`docs-copy-btn ${copied ? 'docs-copy-btn-copied' : ''}`} onClick={handleCopy} title="Copy to clipboard">
+      {copied ? '✓ Copied' : 'Copy'}
+    </button>
+  );
+}
 
 const sections = [
   {
@@ -227,10 +242,14 @@ function renderMarkdown(md: string) {
         i++;
       }
       i++; // skip closing ```
+      const codeText = codeLines.join('\n');
       elements.push(
         <div className="docs-code-block" key={key++}>
-          {lang && <div className="docs-code-lang">{lang}</div>}
-          <pre><code>{codeLines.join('\n')}</code></pre>
+          <div className="docs-code-header">
+            {lang && <div className="docs-code-lang">{lang}</div>}
+            <CopyButton text={codeText} />
+          </div>
+          <pre><code>{codeText}</code></pre>
         </div>
       );
       continue;

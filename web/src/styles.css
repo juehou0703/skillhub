@@ -831,6 +831,16 @@ body {
   overflow: hidden;
 }
 
+.docs-code-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  padding: 0 8px 0 0;
+  min-height: 32px;
+}
+
 .docs-code-lang {
   font-family: var(--font-mono);
   font-size: 11px;
@@ -838,9 +848,39 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   padding: 6px 14px;
-  background: var(--bg);
   color: var(--text-muted);
-  border-bottom: 1px solid var(--border);
+}
+
+.docs-copy-btn {
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 3px 10px;
+  cursor: pointer;
+  transition: all 150ms var(--ease-enter);
+  white-space: nowrap;
+}
+
+.docs-copy-btn:hover {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+.docs-copy-btn-copied {
+  color: var(--success);
+  border-color: var(--success);
+  background: var(--success-subtle);
+}
+
+.docs-copy-btn-copied:hover {
+  color: var(--success);
+  border-color: var(--success);
+  background: var(--success-subtle);
 }
 
 .docs-code-block pre {
