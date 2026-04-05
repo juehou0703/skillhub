@@ -38,14 +38,22 @@ export default function BrowsePage() {
 
   const categories = [...new Set(skills.map((s) => s.category).filter(Boolean))];
 
-  const filtered = skills.filter((s) => {
-    const matchesText =
-      !filter ||
-      s.display_name.toLowerCase().includes(filter.toLowerCase()) ||
-      s.description.toLowerCase().includes(filter.toLowerCase());
-    const matchesCategory = !categoryFilter || s.category === categoryFilter;
-    return matchesText && matchesCategory;
-  });
+  const filtered = skills
+    .filter((s) => {
+      const matchesText =
+        !filter ||
+        s.display_name.toLowerCase().includes(filter.toLowerCase()) ||
+        s.description.toLowerCase().includes(filter.toLowerCase());
+      const matchesCategory = !categoryFilter || s.category === categoryFilter;
+      return matchesText && matchesCategory;
+    })
+    .sort((a, b) => {
+      // Sort by category first
+      const categoryDiff = (a.category || '').localeCompare(b.category || '');
+      if (categoryDiff !== 0) return categoryDiff;
+      // Then by price (ascending)
+      return a.price_per_use - b.price_per_use;
+    });
 
   if (loading) return <div className="loading">Loading skills...</div>;
   if (error) return <div className="error-box">Error: {error}</div>;

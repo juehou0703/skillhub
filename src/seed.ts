@@ -14,20 +14,20 @@ const CREATOR_ID = "00000000-0000-0000-0000-000000000001"; // gstack creator
 const TEST_USER_ID = "00000000-0000-0000-0000-000000000010";
 
 // Pricing and category overrides for marketplace realism
-// ~50% of skills are paid ($1.99–$4.99 per invocation, stored in cents)
+// Skills priced at 0 (free), 50 ($0.50), or $1.99–$4.99 per invocation (stored in cents)
 const SKILL_OVERRIDES: Record<string, { price: number; category: string }> = {
-  benchmark: { price: 499, category: "analysis" },
-  "design-consultation": { price: 349, category: "creative" },
+  benchmark: { price: 50, category: "analysis" },
+  "design-consultation": { price: 50, category: "creative" },
   "design-review": { price: 299, category: "creative" },
-  "plan-design-review": { price: 399, category: "creative" },
+  "plan-design-review": { price: 50, category: "creative" },
   codex: { price: 499, category: "coding" },
-  qa: { price: 399, category: "coding" },
+  qa: { price: 50, category: "coding" },
   "qa-only": { price: 249, category: "coding" },
-  review: { price: 299, category: "coding" },
+  review: { price: 50, category: "coding" },
   "plan-ceo-review": { price: 349, category: "business" },
-  "office-hours": { price: 299, category: "business" },
+  "office-hours": { price: 50, category: "business" },
   retro: { price: 249, category: "analysis" },
-  "land-and-deploy": { price: 399, category: "developer-tools" },
+  "land-and-deploy": { price: 50, category: "developer-tools" },
   "document-release": { price: 199, category: "writing" },
   // Free skills with diversified categories
   "plan-eng-review": { price: 0, category: "coding" },
