@@ -6,16 +6,19 @@ const sections = [
     title: 'Connect to SkillHub',
     content: `## Connect to SkillHub
 
-SkillHub exposes an MCP server over HTTP — no package to install. Just point Claude at the endpoint with your API key and your skills appear as tools automatically.
+No package to install. Just add your API key to Claude's config and your skills appear as tools automatically.
 
-### Prerequisites
+### Step 1 — Get your API key
 
-- A SkillHub account with an API key (get one from the Dashboard)
-- Claude Code v1.0+ or Claude Desktop with MCP support
+Go to the **Dashboard** tab and copy your API key. The test key is:
 
-### Configure Claude Code
+\`\`\`
+sk_test_skillhub_user_001
+\`\`\`
 
-Add SkillHub to your Claude Code configuration. Edit \`~/.claude/settings.json\`:
+### Step 2 — Add SkillHub to Claude Code
+
+Open \`~/.claude/settings.json\` and paste this block, replacing \`YOUR_API_KEY\`:
 
 \`\`\`json
 {
@@ -31,11 +34,9 @@ Add SkillHub to your Claude Code configuration. Edit \`~/.claude/settings.json\`
 }
 \`\`\`
 
-Replace \`YOUR_API_KEY\` with the key from your Dashboard. The test key is \`sk_test_skillhub_user_001\`.
+### Step 2 (alternative) — Add to Claude Desktop
 
-### Configure Claude Desktop
-
-For Claude Desktop, add the server under **Settings → Developer → MCP Servers**:
+In Claude Desktop go to **Settings → Developer → MCP Servers** and paste:
 
 \`\`\`json
 {
@@ -51,53 +52,74 @@ For Claude Desktop, add the server under **Settings → Developer → MCP Server
 }
 \`\`\`
 
-### Configure Cowork
+### Step 3 — Verify the connection
 
-In Cowork, add a new MCP connector with:
-
-- **URL:** \`https://skillhub-two.vercel.app/mcp\`
-- **Auth header:** \`Authorization: Bearer YOUR_API_KEY\`
-
-### Verify the Connection
-
-Once configured, restart Claude and ask:
+Restart Claude, then paste this directly into the chat:
 
 \`\`\`
-You: What SkillHub skills are available?
+List all available SkillHub tools and give me a one-line summary of each.
 \`\`\`
 
-You should see a list of your purchased skills as tools. If you get an error, check that the SkillHub server is running and your API key is valid.`,
+You should see your purchased skills listed. If not, check that your API key is correct.`,
   },
   {
     id: 'usage',
     title: 'Using Skills',
     content: `## Using Skills
 
-Once the MCP server is connected, you can invoke any skill from the marketplace directly in Claude.
+Once connected, paste any of these prompts directly into Claude — no extra setup needed.
 
-### Browsing Skills
-
-Ask Claude to list available skills:
+### See what skills you have access to
 
 \`\`\`
-You: What skills are available on SkillHub?
+List all my available SkillHub skills with their names and descriptions.
 \`\`\`
 
-Or filter by category:
+### Run a code review
 
 \`\`\`
-You: Show me SkillHub skills for code analysis
+Use the review skill on the following code and give me a detailed assessment:
+
+[paste your code here]
 \`\`\`
 
-### Invoking a Skill
-
-Invoke a skill by name:
+### Run a design review
 
 \`\`\`
-You: Use the code-review skill to review my last commit
+Use the design-review skill on the following and give me actionable feedback:
+
+[paste your design description, screenshot, or spec here]
 \`\`\`
 
-Claude will call the skill via MCP, and you'll see the result inline. Each invocation is billed to your SkillHub balance.
+### Run a benchmark / analysis
+
+\`\`\`
+Use the benchmark skill to evaluate the following and give me a structured report:
+
+[paste what you want benchmarked]
+\`\`\`
+
+### Run a CEO-level business review
+
+\`\`\`
+Use the plan-ceo-review skill on this plan and tell me what a CEO would flag:
+
+[paste your plan or document here]
+\`\`\`
+
+### Run office hours (general expert Q&A)
+
+\`\`\`
+Use the office-hours skill. My question is:
+
+[paste your question here]
+\`\`\`
+
+### Tips
+
+- Each invocation is billed to your SkillHub balance — check your Dashboard to track usage.
+- You can pass any amount of context after the skill name. The more detail you give, the better the output.
+- Skills appear as MCP tools — Claude will call them automatically when you reference them by name.
 
 ### Passing Parameters
 
