@@ -825,50 +825,35 @@ body {
 }
 
 .docs-code-block {
+  position: relative;
   margin: 12px 0 16px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
 }
 
-.docs-code-header {
+.docs-copy-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  background: var(--bg);
-  border-bottom: 1px solid var(--border);
-  padding: 0 8px 0 0;
-  min-height: 32px;
-}
-
-.docs-code-lang {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 6px 14px;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
   color: var(--text-muted);
-}
-
-.docs-copy-btn {
-  font-family: var(--font);
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  background: none;
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 3px 10px;
   cursor: pointer;
   transition: all 150ms var(--ease-enter);
-  white-space: nowrap;
+  z-index: 1;
 }
 
 .docs-copy-btn:hover {
-  background: var(--surface);
   color: var(--text);
   border-color: var(--border-strong);
+  background: var(--bg);
 }
 
 .docs-copy-btn-copied {
@@ -886,6 +871,7 @@ body {
 .docs-code-block pre {
   margin: 0;
   padding: 14px;
+  padding-right: 44px;
   background: var(--bg);
   overflow-x: auto;
 }

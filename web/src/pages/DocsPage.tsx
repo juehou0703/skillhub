@@ -10,7 +10,16 @@ function CopyButton({ text }: { text: string }) {
   }, [text]);
   return (
     <button className={`docs-copy-btn ${copied ? 'docs-copy-btn-copied' : ''}`} onClick={handleCopy} title="Copy to clipboard">
-      {copied ? '✓ Copied' : 'Copy'}
+      {copied ? (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+      ) : (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+        </svg>
+      )}
     </button>
   );
 }
@@ -21,7 +30,11 @@ const sections = [
     title: 'Connect to SkillHub',
     content: `## Connect to SkillHub
 
-No package to install. Just add your API key to Claude's config and your skills appear as tools automatically.
+Simply copy and paste this into Claude:
+
+\`\`\`
+Follow instructions in https://skillhub-two.vercel.app/docs to install SkillHub to Claude Code
+\`\`\`
 
 ### Step 1 — Get your API key
 
@@ -31,9 +44,9 @@ Go to the **Dashboard** tab and copy your API key. The test key is:
 sk_test_skillhub_user_001
 \`\`\`
 
-### Step 2 — Add SkillHub to Claude Code
+### Step 2 — Add SkillHub to \`~/.mcp.json\`
 
-Open \`~/.claude/settings.json\` and paste this block, replacing \`YOUR_API_KEY\`:
+Create or open \`~/.mcp.json\` (user-level MCP config) and add this block, replacing \`YOUR_API_KEY\`:
 
 \`\`\`json
 {
@@ -67,15 +80,15 @@ In Claude Desktop go to **Settings → Developer → MCP Servers** and paste:
 }
 \`\`\`
 
-### Step 3 — Verify the connection
+### Step 3 — Restart Claude and verify
 
-Restart Claude, then paste this directly into the chat:
+Restart Claude Code, then paste this into the chat:
 
 \`\`\`
-List only the tools available from the SkillHub MCP server. Ignore all native Claude Code skills and slash commands — I only want to see tools registered via the external SkillHub MCP connection at skillhub-two.vercel.app.
+Show me all the skills available to me from SkillHub.
 \`\`\`
 
-You should see your marketplace skills listed. If Claude lists its own built-in skills instead, make sure you include "MCP server tool" or "SkillHub MCP" in your prompt — Claude can otherwise confuse native skills with marketplace tools.`,
+You should see your marketplace skills listed. If not, see the **Troubleshooting** section.`,
   },
   {
     id: 'usage',
@@ -84,18 +97,16 @@ You should see your marketplace skills listed. If Claude lists its own built-in 
 
 Once connected, paste any of these prompts directly into Claude — no extra setup needed.
 
-**Important:** Always say "SkillHub MCP tool" in your prompt. Claude has its own built-in skills and can mix them up with marketplace tools if you're not explicit.
-
 ### See what skills you have access to
 
 \`\`\`
-List only the tools from the SkillHub MCP server — not native Claude skills.
+List all my available SkillHub skills with their names and descriptions.
 \`\`\`
 
 ### Run a code review
 
 \`\`\`
-Use the SkillHub MCP tool `review` on the following code and give me a detailed assessment:
+Use the review skill on the following code and give me a detailed assessment:
 
 [paste your code here]
 \`\`\`
@@ -103,7 +114,7 @@ Use the SkillHub MCP tool `review` on the following code and give me a detailed 
 ### Run a design review
 
 \`\`\`
-Use the SkillHub MCP tool `design-review` on the following and give me actionable feedback:
+Use the design-review skill on the following and give me actionable feedback:
 
 [paste your design description, screenshot, or spec here]
 \`\`\`
@@ -111,7 +122,7 @@ Use the SkillHub MCP tool `design-review` on the following and give me actionabl
 ### Run a benchmark / analysis
 
 \`\`\`
-Use the SkillHub MCP tool `benchmark` to evaluate the following and give me a structured report:
+Use the benchmark skill to evaluate the following and give me a structured report:
 
 [paste what you want benchmarked]
 \`\`\`
@@ -119,7 +130,7 @@ Use the SkillHub MCP tool `benchmark` to evaluate the following and give me a st
 ### Run a CEO-level business review
 
 \`\`\`
-Use the SkillHub MCP tool `plan-ceo-review` on this plan and tell me what a CEO would flag:
+Use the plan-ceo-review skill on this plan and tell me what a CEO would flag:
 
 [paste your plan or document here]
 \`\`\`
@@ -127,7 +138,7 @@ Use the SkillHub MCP tool `plan-ceo-review` on this plan and tell me what a CEO 
 ### Run office hours (general expert Q&A)
 
 \`\`\`
-Use the SkillHub MCP tool `office-hours`. My question is:
+Use the office-hours skill. My question is:
 
 [paste your question here]
 \`\`\`
@@ -136,14 +147,14 @@ Use the SkillHub MCP tool `office-hours`. My question is:
 
 - Each invocation is billed to your SkillHub balance — check your Dashboard to track usage.
 - You can pass any amount of context after the skill name. The more detail you give, the better the output.
-- Always reference skills as "SkillHub MCP tool \`slug\`" to avoid Claude using its own built-ins instead.
+- Skills appear as MCP tools — Claude will call them automatically when you reference them by name.
 
 ### Passing Parameters
 
 Some skills accept parameters:
 
 \`\`\`
-Use the SkillHub MCP tool `translate` with target_language="Spanish" on this paragraph: ...
+You: Use the translate skill with target_language="Spanish" on this paragraph: ...
 \`\`\`
 
 Check each skill's detail page on the Browse tab for its full parameter list.`,
@@ -153,43 +164,30 @@ Check each skill's detail page on the Browse tab for its full parameter list.`,
     title: 'Troubleshooting',
     content: `## Troubleshooting
 
-If Claude isn't showing your SkillHub tools, you can manually verify the MCP connection with curl.
+If Claude isn't showing your SkillHub tools, use the script below to verify the MCP connection directly. This is the exact sequence required to successfully authenticate and list tools.
 
-### Full MCP handshake (3 steps)
+### Run this to verify your connection
 
-The MCP protocol requires an initialization handshake before you can list tools. Run all three steps in order.
-
-**Step 1 — Initialize and capture the session ID**
+Paste this entire script into your terminal, replacing YOUR_API_KEY:
 
 \`\`\`bash
+# Step 1: Initialize — get a session ID
 INIT_RESP=$(curl -s -D - -X POST https://skillhub-two.vercel.app/mcp \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -H "Accept: text/event-stream, application/json" \\
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}')
-
 SESSION_ID=$(echo "$INIT_RESP" | grep -i "mcp-session-id" | awk '{print $2}' | tr -d '\\r')
 echo "Session: $SESSION_ID"
-\`\`\`
 
-You should see a session ID printed and a response like:
-\`\`\`
-data: {"result":{"protocolVersion":"2024-11-05","capabilities":{"tools":{"listChanged":true}},"serverInfo":{"name":"skillhub-marketplace","version":"0.1.0"}},"jsonrpc":"2.0","id":1}
-\`\`\`
-
-**Step 2 — Send the initialized notification**
-
-\`\`\`bash
+# Step 2: Send initialized notification (required before tools/list)
 curl -s -X POST https://skillhub-two.vercel.app/mcp \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -H "mcp-session-id: $SESSION_ID" \\
   -d '{"jsonrpc":"2.0","method":"notifications/initialized"}'
-\`\`\`
 
-**Step 3 — List all tools**
-
-\`\`\`bash
+# Step 3: List all registered tools
 curl -s -X POST https://skillhub-two.vercel.app/mcp \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
@@ -198,14 +196,33 @@ curl -s -X POST https://skillhub-two.vercel.app/mcp \\
   -d '{"jsonrpc":"2.0","id":2,"method":"tools/list"}'
 \`\`\`
 
-This returns the full list of tools registered for your account. If you see tools here but not in Claude, the issue is with how Claude Code is reading the MCP config — double-check \`~/.claude/settings.json\`.
+A successful run looks like this:
+
+\`\`\`
+Session: 20518f9c-a5fb-48b1-8fa9-de34280ea969
+event: message
+data: {"result":{"protocolVersion":"2024-11-05","capabilities":{"tools":{"listChanged":true}},"serverInfo":{"name":"skillhub-marketplace","version":"0.1.0"}},"jsonrpc":"2.0","id":1}
+...
+event: message
+data: {"jsonrpc":"2.0","id":2,"result":{"tools":[{"name":"benchmark", ...}]}}
+\`\`\`
+
+If you see your tools listed here but not in Claude, the issue is your MCP config — double-check that the Authorization header is set in \`~/.claude/settings.json\`.
+
+### Why three steps?
+
+The MCP protocol requires a handshake before tools can be listed. Skipping any step will cause an error:
+
+- **Step 1 (initialize)** — creates a session and negotiates the protocol version
+- **Step 2 (notifications/initialized)** — tells the server the client is ready
+- **Step 3 (tools/list)** — fetches all tools registered to your account
 
 ### Common errors
 
 - **401 Unauthorized** — API key is missing or wrong. Check the \`Authorization: Bearer ...\` header.
-- **404 on /mcp** — The session ID is stale (server restarted). Redo Step 1 to get a new session.
-- **Method not found on tools/list** — You skipped Step 2. The initialized notification must be sent before listing tools.
-- **Empty tools list** — Your account has no skills granted. Make sure skills exist in the Browse tab and are accessible to your user.`,
+- **404 on /mcp** — Session ID is stale (server restarted). Rerun from Step 1 to get a new one.
+- **Method not found on tools/list** — Step 2 was skipped. The initialized notification must come first.
+- **Empty tools list** — Your account has no skills granted. Check the Browse tab to confirm skills exist.`,
   },
   {
     id: 'api-keys',
@@ -306,10 +323,7 @@ function renderMarkdown(md: string) {
       const codeText = codeLines.join('\n');
       elements.push(
         <div className="docs-code-block" key={key++}>
-          <div className="docs-code-header">
-            {lang && <div className="docs-code-lang">{lang}</div>}
-            <CopyButton text={codeText} />
-          </div>
+          <CopyButton text={codeText} />
           <pre><code>{codeText}</code></pre>
         </div>
       );
